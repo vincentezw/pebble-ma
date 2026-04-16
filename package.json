@@ -1,0 +1,87 @@
+{
+  "name": "musicassistant",
+  "author": "vincentezw",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app",
+    "music",
+    "Music Assistant"
+  ],
+  "private": true,
+  "dependencies": {
+    "@rebble/clay": "^1.0.8"
+  },
+  "pebble": {
+    "displayName": "Pebble MA",
+    "uuid": "22336b52-d338-4e55-82cf-1b99f129d700",
+    "projectType": "moddable",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery",
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "COMMAND",
+      "DATA"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "ICON_PLAYPAUSE",
+          "file": "bar_icon_playpause.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_NEXT",
+          "file": "bar_icon_next.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICON_PREVIOUS",
+          "file": "bar_icon_previous.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "CASSETTE",
+          "file": "cassette.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "NOCASETTE",
+          "file": "no-cassette.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICONPLAY",
+          "file": "icon_play.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICONPAUSED",
+          "file": "icon_paused.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICONSTOPPED",
+          "file": "icon_stopped.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "ICONSPEAKER",
+          "file": "icon_speaker.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "MENU_ICON",
+          "file": "music_assistant.png",
+          "menuIcon": true
+        }
+      ]
+    }
+  }
+}

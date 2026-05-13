@@ -36,19 +36,25 @@ Pebble.addEventListener('webviewclosed', function(e) {
 
 var DEBOUNCE_MS = 750;
 
-var ws            = null;
-var authed        = false;
-var msgId         = 0;
-var players       = {};  // queue_id → current state object
-var debounceTimer = null;
-var lastSentSig   = null;
+var ws               = null;
+var authed           = false;
+var msgId            = 0;
+var players          = {};  // queue_id → current state object
+var debounceTimer    = null;
+var lastSentSig      = null;
+var pendingResponses = {};  // message_id → callback(result, msg)
 
-function wsSend(command, args) {
+function wsSend(command, args, onResult) {
   var id = String(++msgId);
-  var pending = {};
-  pending[id] = true;
+  if (onResult) pendingResponses[id] = onResult;
   ws.send(JSON.stringify({ message_id: id, command: command, args: args || {} }));
   return id;
+}
+
+function trunc(s, n) {
+  if (!s) return '';
+  s = String(s);
+  return s.length > n ? s.substring(0, n) : s;
 }
 
 // ─── player state ─────────────────────────────────────────────────────────────
@@ -207,14 +213,22 @@ function connect() {
       return;
     }
 
+    // Dispatch by message_id when we have a pending callback for it.
+    if (msg.message_id && pendingResponses[msg.message_id]) {
+      var handler = pendingResponses[msg.message_id];
+      delete pendingResponses[msg.message_id];
+      handler(msg.result, msg);
+      return;
+    }
+
     // Response to player_queues/all — seed initial player state.
     if (msg.message_id && Array.isArray(msg.result)) {
       msg.result.forEach(function (item) {
         if (item.queue_id) {
-          applyQueue(item); 
+          applyQueue(item);
         } else if (item.player_id) {
           // Use our new refactored logic to catch the volume
-          onPlayerUpdated(item); 
+          onPlayerUpdated(item);
         }
       });
       push();
@@ -274,19 +288,81 @@ Pebble.addEventListener('ready', function () {
   connect();
 });
 
-Pebble.addEventListener('appmessage', function (e) {
-  // Commands from watch — wire up when watch has buttons
-  var commands = {
-    1: 'play_pause',
-    2: 'previous',
-    3: 'next',
-    4: 'volume_down',
-    5: 'volume_up',
-  };
-  var commandType = commands[e.payload.COMMAND];
-  sendPlayerCommand(commandType);
+function sendRecentAlbums() {
+  if (!authed || !ws) return;
+  // NOTE: command name "music/recently_played" is a best guess at the MA API.
+  // If MA returns nothing or errors, swap for the correct command/args.
+  wsSend('music/recently_played', { limit: 20 }, function (result) {
+    var items = [];
+    if (Array.isArray(result)) {
+      for (var i = 0; i < result.length && items.length < 20; i++) {
+        var r = result[i] || {};
+        var artistName = '';
+        if (r.artists && r.artists[0]) artistName = r.artists[0].name || '';
+        else if (r.artist) artistName = r.artist;
+        items.push({
+          id:     trunc(r.uri || r.item_id || r.id || '', 40),
+          name:   trunc(r.name || r.title || '', 40),
+          artist: trunc(artistName, 40),
+        });
+      }
+    }
+    Pebble.sendAppMessage({
+      DATA: JSON.stringify({ type: 'recent_albums', items: items }),
+    });
+  });
+}
 
+function sendSpeakers() {
+  if (!authed || !ws) return;
+  wsSend('players/all', {}, function (result) {
+    var items = [];
+    if (Array.isArray(result)) {
+      for (var i = 0; i < result.length && items.length < 10; i++) {
+        var p = result[i] || {};
+        items.push({
+          id:   trunc(p.player_id || '', 40),
+          name: trunc(p.display_name || p.name || p.player_id || '', 40),
+        });
+      }
+    }
+    Pebble.sendAppMessage({
+      DATA: JSON.stringify({ type: 'speakers', items: items }),
+    });
+  });
+}
+
+function playAlbum(payload) {
+  if (!authed || !ws) return;
+  var data;
+  try { data = JSON.parse(payload); } catch (e) { return; }
+  if (!data || !data.album_id || !data.player_id) return;
+  // NOTE: best guess at MA's play_media shape. Adjust args if MA expects
+  // a different field name (e.g. `media`, `uri`, `items`).
+  wsSend('player_queues/play_media', {
+    queue_id: data.player_id,
+    media:    data.album_id,
+  });
+}
+
+Pebble.addEventListener('appmessage', function (e) {
   console.log('[MA] from watch: ' + JSON.stringify(e.payload));
+
+  var cmd = e.payload.COMMAND;
+  var transport = { 1: 'play_pause', 2: 'previous', 3: 'next',
+                    4: 'volume_down', 5: 'volume_up' };
+
+  if (transport[cmd]) {
+    sendPlayerCommand(transport[cmd]);
+    return;
+  }
+
+  switch (cmd) {
+    case 6: sendRecentAlbums();        break;
+    case 7: sendSpeakers();            break;
+    case 8: playAlbum(e.payload.DATA); break;
+    default: console.log('[MA] unknown COMMAND: ' + cmd);
+  }
 });
 
 

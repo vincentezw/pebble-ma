@@ -14,7 +14,7 @@
   "pebble": {
     "displayName": "Pebble MA",
     "uuid": "22336b52-d338-4e55-82cf-1b99f129d700",
-    "projectType": "moddable",
+    "projectType": "native",
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [

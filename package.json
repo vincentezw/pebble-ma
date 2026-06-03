@@ -1,7 +1,7 @@
 {
   "name": "musicassistant",
   "author": "vincentezw",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": [
     "pebble-app",
     "music",
@@ -27,6 +27,9 @@
     "messageKeys": [
       "COMMAND",
       "DATA"
+    ],
+    "capabilities": [
+      "configurable"
     ],
     "resources": {
       "media": [

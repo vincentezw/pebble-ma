@@ -4,22 +4,43 @@ var clay = new Clay(clayConfig, null, {autoHandleEvents: false});
 
 var maUrl, maToken;
 function loadSettings() {
-  maUrl = localStorage.getItem("MA_URL");
-  maToken = localStorage.getItem("MA_TOKEN");
+  maUrl = localStorage.getItem("MA_URL") || '';
+  maToken = localStorage.getItem("MA_TOKEN") || '';
+
+  // Older builds may have stored null as the literal string "null".
+  if (maUrl === 'null') maUrl = '';
+  if (maToken === 'null') maToken = '';
 }
 
 Pebble.addEventListener('showConfiguration', function(e) {
+  loadSettings();
+
+  // Clay only pre-populates fields from its own `clay-settings` blob.
+  // Keep it in sync with the settings we actually use so reopening the
+  // config page shows the previously saved values.
+  clay.setSettings({
+    MAUrl: maUrl || '',
+    MAToken: maToken || '',
+  });
+
   Pebble.openURL(clay.generateUrl());
 });
 
 Pebble.addEventListener('webviewclosed', function(e) {
   if (!e || !e.response) return;
 
-  const decoded = decodeURIComponent(e.response);
-  const dict = JSON.parse(decoded);
+  var dict;
+  try {
+    // Parse via Clay so it also persists to `clay-settings`, which is what
+    // generateUrl() reads the next time the config page is opened.
+    dict = clay.getSettings(e.response, false);
+  } catch (err) {
+    console.log('[MA] failed to parse settings: ' + err.message);
+    return;
+  }
 
-  maUrl = (dict.MAUrl && dict.MAUrl.value) || null;
-  maToken = (dict.MAToken && dict.MAToken.value) || null;
+  maUrl = (dict.MAUrl && dict.MAUrl.value) || '';
+  maToken = (dict.MAToken && dict.MAToken.value) || '';
 
   localStorage.setItem("MA_URL", maUrl);
   localStorage.setItem("MA_TOKEN", maToken);

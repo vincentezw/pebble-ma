@@ -1,7 +1,7 @@
 {
   "name": "musicassistant",
   "author": "vincentezw",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "keywords": [
     "pebble-app",
     "music",
@@ -35,18 +35,8 @@
       "media": [
         {
           "type": "bitmap",
-          "name": "ICON_PLAYPAUSE",
-          "file": "bar_icon_playpause.png"
-        },
-        {
-          "type": "bitmap",
-          "name": "ICON_NEXT",
-          "file": "bar_icon_next.png"
-        },
-        {
-          "type": "bitmap",
-          "name": "ICON_PREVIOUS",
-          "file": "bar_icon_previous.png"
+          "name": "ACTION_BAR",
+          "file": "action_bar.png"
         },
         {
           "type": "bitmap",
@@ -56,27 +46,17 @@
         {
           "type": "bitmap",
           "name": "NOCASETTE",
-          "file": "no-cassette.png"
-        },
-        {
-          "type": "bitmap",
-          "name": "ICONPLAY",
-          "file": "icon_play.png"
-        },
-        {
-          "type": "bitmap",
-          "name": "ICONPAUSED",
-          "file": "icon_paused.png"
-        },
-        {
-          "type": "bitmap",
-          "name": "ICONSTOPPED",
-          "file": "icon_stopped.png"
+          "file": "no_cassette.png"
         },
         {
           "type": "bitmap",
           "name": "ICONSPEAKER",
           "file": "icon_speaker.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "PLAY_BAR",
+          "file": "play_bar.png"
         },
         {
           "type": "bitmap",

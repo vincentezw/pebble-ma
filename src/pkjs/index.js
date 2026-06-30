@@ -3,21 +3,21 @@ var clayConfig = require('./config');
 var clay = new Clay(clayConfig, null, {autoHandleEvents: false});
 
 var maUrl, maToken;
+var recentlyPlayedIds = [];
+var getPlayerIds = [];
 function loadSettings() {
   maUrl = localStorage.getItem("MA_URL") || '';
   maToken = localStorage.getItem("MA_TOKEN") || '';
-
-  // Older builds may have stored null as the literal string "null".
-  if (maUrl === 'null') maUrl = '';
-  if (maToken === 'null') maToken = '';
 }
+
+const playItem = {
+  id: null,
+  player_id: null,
+};
 
 Pebble.addEventListener('showConfiguration', function(e) {
   loadSettings();
 
-  // Clay only pre-populates fields from its own `clay-settings` blob.
-  // Keep it in sync with the settings we actually use so reopening the
-  // config page shows the previously saved values.
   clay.setSettings({
     MAUrl: maUrl || '',
     MAToken: maToken || '',
@@ -124,7 +124,7 @@ function push() {
     });
   }
 
-  Pebble.sendAppMessage({ DATA: payload },
+  Pebble.sendAppMessage({ COMMAND: 0, DATA: payload },
     function ()    { console.log('[MA] sent: ' + sig); },
     function (err) { console.log('[MA] send failed: ' + JSON.stringify(err)); }
   );
@@ -195,7 +195,22 @@ function onEvent(event, data) {
   }
 }
 
-// ─── connection ───────────────────────────────────────────────────────────────
+function onResult(result, type) {
+  const filtered = result
+    .filter(item => type === 'album' || item.available === true)
+    .map(item => {
+      const id = type === 'album' ? 
+        encodeURIComponent(item.uri || "") :
+        encodeURIComponent(item.player_id || "");
+      const name = encodeURIComponent(item.name || "");
+      return `${id}:${name}`;
+    })
+    .join(",");
+  Pebble.sendAppMessage({
+    COMMAND: type === 'album' ? 1 : 2,
+    DATA: filtered
+  });
+}
 
 function connect() {
   if (!maUrl || !maToken) {
@@ -227,30 +242,54 @@ function connect() {
       wsSend('players/all');
       return;
     }
-
-    // Response to player_queues/all — seed initial player state.
+    
     if (msg.message_id && Array.isArray(msg.result)) {
-      msg.result.forEach(function (item) {
-        if (item.queue_id) {
-          applyQueue(item); 
-        } else if (item.player_id) {
-          // Use our new refactored logic to catch the volume
-          onPlayerUpdated(item); 
-        }
-      });
-      push();
-      return;
+      if (recentlyPlayedIds.includes(msg.message_id)) {
+        onResult(msg.result, 'album');
+        recentlyPlayedIds = [];
+      } else if (getPlayerIds.includes(msg.message_id)) {
+        onResult(msg.result, 'player');
+        getPlayerIds = [];
+      } else if (msg.result[0].queue_id || msg.result[0].player_id) {
+        msg.result.forEach(function (item) {
+          if (item.queue_id) {
+            applyQueue(item); 
+          } else if (item.player_id) {
+            onPlayerUpdated(item); 
+          }
+        });
+        push();
+      }
     }
 
-    if (msg.event) onEvent(msg.event, msg.data);
+    if (msg.event) {
+      onEvent(msg.event, msg.data);
+    }
   };
 
   ws.onerror = function () { console.log('[MA] ws error'); };
   ws.onclose = function () {
     console.log('[MA] ws closed — reconnecting in 5 s');
-    Pebble.sendAppMessage({ DATA: JSON.stringify({ state: 'disconnected' }) });
+    Pebble.sendAppMessage({ COMMAND: 0, DATA: JSON.stringify({ state: 'disconnected' }) });
     setTimeout(connect, 5000);
   };
+}
+
+function getRecents() {
+  if (!authed || !ws) {
+    return;
+  }
+  recentlyPlayedIds.push(wsSend('music/recently_played_items', {
+    limit: 10,
+    media_types: ['album'],
+  }));
+}
+
+function getPlayers() {
+  if (!authed || !ws) {
+    return;
+  }
+  getPlayerIds.push(wsSend('players/all'));
 }
 
 function sendPlayerCommand(commandType) {
@@ -282,6 +321,21 @@ function sendPlayerCommand(commandType) {
   wsSend('player_queues/' + commandType, { queue_id: qid });
 }
 
+function sendPlayCommand() {
+  if (!playItem.id || !playItem.player_id) {
+    console.log("Error: no album or player selected");
+  }
+
+  console.log(decodeURIComponent(playItem.id), decodeURIComponent(playItem.player_id));
+  wsSend('player_queues/play_media',
+    {
+      media: decodeURIComponent(playItem.id),
+      queue_id: decodeURIComponent(playItem.player_id),
+      option: 'play',
+    }
+  );
+}
+
 // ─── Pebble lifecycle ─────────────────────────────────────────────────────────
 Pebble.addEventListener('ready', function () {
   console.log('[MA] ready');
@@ -303,11 +357,26 @@ Pebble.addEventListener('appmessage', function (e) {
     3: 'next',
     4: 'volume_down',
     5: 'volume_up',
+    6: 'recents',
+    7: 'selectedAlbum',
+    8: 'selectedPlayer',
   };
   var commandType = commands[e.payload.COMMAND];
-  sendPlayerCommand(commandType);
+  if (commandType === 'recents') {
+    getRecents();
+    return;
+  } else if (commandType == 'selectedAlbum') {
+    var selectedId = e.payload.DATA;
+    playItem.id = selectedId;
+    getPlayers();
+    return;
+  } else if (commandType == 'selectedPlayer') {
+    var selectedPlayer = e.payload.DATA;
+    playItem.player_id = selectedPlayer;
+    sendPlayCommand();
+  }
 
-  console.log('[MA] from watch: ' + JSON.stringify(e.payload));
+  sendPlayerCommand(commandType);
 });
 
 

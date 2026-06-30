@@ -1,28 +1,40 @@
-const colours = Object.freeze({ black: "#000000", grey: "#888888" });
+import {} from "piu/MC";
 
-const styles = Object.freeze({
-  main: new Style({ color: colours.black, font: "18px Gothic" }),
+const colours = Object.freeze({
+  black: "#000000",
+  grey: "#888888",
+  white: "#FFFFFF",
+  blue: "#577dfa",
 });
 
-const textures = Object.freeze({
-  iconPlayPause: new Texture(1),
-  iconNext: new Texture(2),
-  iconPrev: new Texture(3),
-  cassette: new Texture(4),
-  noCassette: new Texture(5),
-  play: new Texture(6),
-  paused: new Texture(7),
-  stopped: new Texture(8),
-  speaker: new Texture(9),
-});
+// using array to save some memory
+const styles = [
+  new Style({ color: colours.black, font: "18px Gothic" }), // main
+  new Style({ color: colours.white, horizontal: "left", font: "18px Gothic" }), // selected
+  new Style({ color: colours.black, horizontal: "left", font: "18px Gothic" }), // unselected
+];
 
 const skins = Object.freeze({
-  cassette: new Skin({ texture: textures.cassette, width: 34, height: 24 }),
-  noCassette: new Skin({ texture: textures.noCassette, width: 34, height: 24 }),
-  play: new Skin({ texture: textures.play, width: 10, height: 8 }),
-  paused: new Skin({ texture: textures.paused, width: 10, height: 8 }),
-  stopped: new Skin({ texture: textures.stopped, width: 10, height: 8 }),
-  speaker: new Skin({ texture: textures.speaker, width: 15, height: 15 }),
+  actionBar: new Skin({
+    texture: new Texture(1),
+    width: 17,
+    height: 14,
+    fill: colours.black,
+    variants: 17,
+  }),
+  playBar: new Skin({
+    texture: new Texture(5),
+    width: 10,
+    height: 8,
+    fill: colours.white,
+    variants: 10,
+  }),
+  cassette: new Skin({ texture: new Texture(2), width: 34, height: 24 }),
+  noCassette: new Skin({ texture: new Texture(3), width: 34, height: 24 }),
+  menuHeader: new Skin({ fill: colours.blue }),
+  blackBg: new Skin({ fill: colours.black }),
+  whiteBg: new Skin({ fill: colours.white }),
+  speaker: new Skin({ texture: new Texture(4), width: 15, height: 15 }),
 });
 
 function formatTime(seconds) {
@@ -35,4 +47,4 @@ function formatTime(seconds) {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-export {colours, styles, skins, textures, formatTime};
+export {colours, styles, skins, formatTime};

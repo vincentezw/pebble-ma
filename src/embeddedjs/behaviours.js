@@ -1,5 +1,5 @@
 import {} from "piu/MC";
-import {colours, formatTime} from "./assets";
+import {colours, formatTime, skins, styles} from "./assets";
 
 class LabelTimeBehaviour extends Behavior {
   onCreate(position, _) {
@@ -25,6 +25,42 @@ class LabelTimeBehaviour extends Behavior {
     if (this.playing) {
       this.position += 1;
       label.string = formatTime(this.position);
+    }
+  }
+}
+
+class MenuList extends Column {
+  constructor($) {
+    super(null, $);
+    this.selectedIndex = 0;
+  }
+  updateSelection() {
+    for (let i = 0; i < this.length; i++) {
+      const item = this.content(i);
+      if (i === this.selectedIndex) {
+        item.style = styles[1];
+        item.skin = skins.blackBg;
+      } else {
+        item.style = styles[2];
+        item.skin = skins.whiteBg;
+      }
+    }
+  }
+
+  moveSelection(delta) {
+    const newIndex = this.selectedIndex + delta;
+    if (newIndex >= 0 && newIndex < this.length) {
+      this.selectedIndex = newIndex;
+      this.updateSelection();
+    }
+  }
+
+  getSelectedItem() {
+    const item = this.content(this.selectedIndex);
+    this.selectedIndex = 0; // reset
+    return {
+      id: item.maId,
+      type: item.menuType,
     }
   }
 }
@@ -66,4 +102,8 @@ class ProgressBehaviour extends Behavior {
   }
 }
 
-export {LabelTimeBehaviour, ProgressBehaviour};
+export {
+  LabelTimeBehaviour,
+  MenuList,
+  ProgressBehaviour
+};
